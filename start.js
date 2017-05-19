@@ -64,34 +64,6 @@ const fbMessage = (id, text) => {
   });
 };
 
-// const fbMessage = (id, text) => {
-//   const body = JSON.stringify({
-//     recipient: {
-//       id
-//     },
-//     message: {
-//       attachment: {
-//         type: "image",
-//         payload: {
-//           url: "https://s3-media1.fl.yelpcdn.com/bphoto/xa-ZbH7RFj6Zu16_rLoQxQ/o.jpg"
-//         }
-//       }
-//     }
-//   });
-//   const qs = 'access_token=' + encodeURIComponent(FB_PAGE_TOKEN);
-//   return fetch('https://graph.facebook.com/me/messages?' + qs, {
-//     method: 'POST',
-//     body,
-//   })
-//   .then(rsp => rsp.json())
-//   .then(json => {
-//     if (json.error && json.error.message) {
-//       throw new Error(json.error.message);
-//     }
-//     return json;
-//   });
-// };
-
 // ----------------------------------------------------------------------------
 // Wit.ai bot specific code
 
@@ -235,6 +207,7 @@ app.get('/webhook', (req, res) => {
     req.query['hub.verify_token'] === FB_VERIFY_TOKEN) {
     res.send(req.query['hub.challenge']);
   } else {
+    console.error("Failed validation. Make sure the validation tokens match.");
     res.sendStatus(400);
   }
 });
@@ -259,7 +232,6 @@ app.post('/webhook', (req, res) => {
 
           // We retrieve the message content
           const {text, attachments} = event.message;
-          console.log('EVENT', event);
           if (attachments) {
             // We received an attachment
             // Let's reply with an automatic message

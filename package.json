@@ -1,19 +1,19 @@
 {
-  "name": "messenger-get-started",
+  "name": "grumpyelpBot",
   "version": "1.0.0",
-  "description": "Get started example for Messenger Platform",
-  "main": "app.js",
+  "description": "Facebook Messenger app to make Yelp queries",
+  "main": "start.js",
   "scripts": {
-    "start": "node NODE-WIT_messenger.js",
+    "start": "node start.js",
     "lint": "jshint --exclude node_modules .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/fbsamples/messenger-platform-samples.git"
+    "url": "https://github.com/parky22/grumpyelpBot.git"
   },
-  "author": "Facebook",
-  "license": "ISC",
+  "author": "parky22",
+  "license": "MIT",
   "dependencies": {
     "axios": "^0.15.3",
     "body-parser": "^1.15.0",
