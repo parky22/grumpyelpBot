@@ -20,7 +20,6 @@ const fetch = require('node-fetch');
 const request = require('request');
 const config = require('config');
 const fbActions = require('./fbActions');
-//const fbApp = require('./fbApp');
 
 let Wit = require('node-wit').Wit;
 let log = require('node-wit').log;
