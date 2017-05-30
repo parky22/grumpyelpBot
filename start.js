@@ -12,6 +12,7 @@
 // 4. WIT_TOKEN=your_access_token FB_APP_SECRET=your_app_secret FB_PAGE_TOKEN=your_page_token node examples/messenger.js
 // 5. Subscribe your page to the Webhooks using verify_token and `https://<your_ngrok_io>/webhook` as callback URL.
 // 6. Talk to your bot on Messenger!
+require('./.secrets');
 
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
@@ -29,13 +30,13 @@ let log = require('node-wit').log;
 const PORT = process.env.PORT || 8445;
 
 // Wit.ai parameters
-const WIT_TOKEN = config.get('witToken');
+const WIT_TOKEN = process.env.WIT_TOKEN;
 
 // Messenger API parameters
-const FB_PAGE_TOKEN = config.get('pageAccessToken');
-const FB_APP_SECRET = config.get('appSecret');
+const FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN;
+const FB_APP_SECRET = process.env.FB_APP_SECRET;
 
-let FB_VERIFY_TOKEN = config.get('validationToken');
+let FB_VERIFY_TOKEN = process.env.FB_VERIFY_TOKEN;
 
 // ----------------------------------------------------------------------------
 // Messenger API specific code
