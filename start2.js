@@ -18,24 +18,37 @@ const crypto = require('crypto');
 const express = require('express');
 const fetch = require('node-fetch');
 const request = require('request');
-const config = require('config');
-const fbActions = require('./fbActions');
+require('./.secrets');
 
-let Wit = require('node-wit').Wit;
-let log = require('node-wit').log;
-
+let Wit = null;
+let log = null;
+try {
+  // if running from repo
+  Wit = require('../').Wit;
+  log = require('../').log;
+} catch (e) {
+  Wit = require('node-wit').Wit;
+  log = require('node-wit').log;
+}
 
 // Webserver parameter
 const PORT = process.env.PORT || 8445;
 
 // Wit.ai parameters
-const WIT_TOKEN = config.get('witToken');
+const WIT_TOKEN = process.env.WIT_TOKEN;
 
 // Messenger API parameters
-const FB_PAGE_TOKEN = config.get('pageAccessToken');
-const FB_APP_SECRET = config.get('appSecret');
+const FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN;
+if (!FB_PAGE_TOKEN) { throw new Error('missing FB_PAGE_TOKEN') }
+const FB_APP_SECRET = process.env.FB_APP_SECRET;
+if (!FB_APP_SECRET) { throw new Error('missing FB_APP_SECRET') }
 
-let FB_VERIFY_TOKEN = config.get('validationToken');
+let FB_VERIFY_TOKEN = null;
+crypto.randomBytes(8, (err, buff) => {
+  if (err) throw err;
+  FB_VERIFY_TOKEN = buff.toString('hex');
+  console.log(`/webhook will accept the Verify Token "${FB_VERIFY_TOKEN}"`);
+});
 
 // ----------------------------------------------------------------------------
 // Messenger API specific code
@@ -114,71 +127,8 @@ const actions = {
       return Promise.resolve()
     }
   },
-  setIntent({context, entities}) {
-    context.intent = entities.intent;
-
-    return new Promise(function(resolve, reject) {
-      // Here should go the api call, e.g.:
-      // context.forecast = apiCall(context.loc)
-      return resolve(context);
-    })
-  },
   // You should implement your custom actions here
   // See https://wit.ai/docs/quickstart
-  setRestaurantFoodType({context, entities}) {
-    context.cuisine = entities.restaurantFood[0].value
-    console.log('RESTAURANT FOOD: CONTEXT', context)
-    console.log('RESTAURANT FOOD: ENTITIES', entities)
-
-    return new Promise(function(resolve, reject) {
-      // Here should go the api call, e.g.:
-      // context.forecast = apiCall(context.loc)
-      return resolve(context);
-    })
-  },
-  setLocation({context, entities}) {
-    context.location = entities.location[0].value;
-    console.log('RESTAURANT LOCATION: CONTEXT', context)
-    console.log('RESTAURANT LOCATION: ENTITIES', entities)
-    return new Promise(function(resolve,reject){
-      return resolve(context);
-    })
-  },
-  setRestaurantPrice({context, entities}) {
-    console.log('RESTAURANT PRICE: CONTEXT', context)
-    console.log('RESTAURANT PRICE: ENTITIES', entities)
-     context.price = entities.restaurantPrice;
-    return new Promise(function(resolve, reject){
-      return resolve(context);
-    });
-  },
-  getRestaurant({context, entities}) {
-    var yelpRestaurant = '';
-    console.log('GETRESTAURANT: CONTEXT', context)
-    console.log('GETRESTAURANT: ENTITIES', entities)
-    return new Promise(function(resolve, reject) {
-      // Here should go the api call, e.g.:
-      // context.forecast = apiCall(context.loc)
-
-      //entities.location[0].value, entities.intent[0].value
-      request( fbActions.createYelpRequest(context.location, [context.intent[0].value, context.cuisine]), function(error, response, body){
-      if (!error && response.statusCode == 200) {
-        console.log('NEW YELP BUSINESSES', response.body.businesses[0])
-        yelpRestaurant = response.body.businesses[0].name + " rating: " + response.body.businesses[0].rating + " phone: " + response.body.businesses[0].phone + " address: " + response.body.businesses[0].location.address1;
-        console.log("yelp restaurants are ------", yelpRestaurant);
-        context.response = yelpRestaurant;
-        context.url = response.body.businesses[0].url;
-        context.number = response.body.businesses[0].display_phone;
-        context.second = response.body.businesses[1].name + " rating: " + response.body.businesses[1].rating + " phone: " + response.body.businesses[1].phone + " address: " + response.body.businesses[1].location.address1;
-        return resolve(context);
-
-      } else {
-        console.error("Failed calling Yelp API", response.statusCode, response.statusMessage, body.error);
-      }
-      });
-    });
-  },
-
 };
 
 // Setting up our bot
@@ -204,7 +154,6 @@ app.get('/webhook', (req, res) => {
     req.query['hub.verify_token'] === FB_VERIFY_TOKEN) {
     res.send(req.query['hub.challenge']);
   } else {
-    console.error("Failed validation. Make sure the validation tokens match.");
     res.sendStatus(400);
   }
 });
@@ -215,6 +164,7 @@ app.post('/webhook', (req, res) => {
   // See the Webhook reference
   // https://developers.facebook.com/docs/messenger-platform/webhook-reference
   const data = req.body;
+
   if (data.object === 'page') {
     data.entry.forEach(entry => {
       entry.messaging.forEach(event => {
@@ -229,6 +179,7 @@ app.post('/webhook', (req, res) => {
 
           // We retrieve the message content
           const {text, attachments} = event.message;
+
           if (attachments) {
             // We received an attachment
             // Let's reply with an automatic message

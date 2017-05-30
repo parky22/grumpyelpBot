@@ -1,1 +1,3 @@
 default.json
+.secrets.js
+node_modules
