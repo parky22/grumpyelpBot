@@ -20,7 +20,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const request = require('request');
 const config = require('config');
-const fbActions = require('./fbActions');
+const createYelpRequest = require('./utils');
 
 let Wit = require('node-wit').Wit;
 let log = require('node-wit').log;
@@ -52,16 +52,16 @@ const fbMessage = (id, text) => {
   const qs = 'access_token=' + encodeURIComponent(FB_PAGE_TOKEN);
   return fetch('https://graph.facebook.com/me/messages?' + qs, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     body,
   })
-  .then(rsp => rsp.json())
-  .then(json => {
-    if (json.error && json.error.message) {
-      throw new Error(json.error.message);
-    }
-    return json;
-  });
+    .then(rsp => rsp.json())
+    .then(json => {
+      if (json.error && json.error.message) {
+        throw new Error(json.error.message);
+      }
+      return json;
+    });
 };
 
 // ----------------------------------------------------------------------------
@@ -84,14 +84,14 @@ const findOrCreateSession = (fbid) => {
   if (!sessionId) {
     // No session found for user fbid, let's create a new one
     sessionId = new Date().toISOString();
-    sessions[sessionId] = {fbid: fbid, context: {}};
+    sessions[sessionId] = { fbid: fbid, context: {} };
   }
   return sessionId;
 };
 
 // Our bot actions
 const actions = {
-  send({sessionId}, {text}) {
+  send({ sessionId }, { text }) {
     // Our bot has something to say!
     // Let's retrieve the Facebook user whose session belongs to
     const recipientId = sessions[sessionId].fbid;
@@ -100,52 +100,53 @@ const actions = {
       // Let's forward our bot response to her.
       // We return a promise to let our bot know when we're done sending
       return fbMessage(recipientId, text)
-      .then(() => null)
-      .catch((err) => {
-        console.error(
-          'Oops! An error occurred while forwarding the response to',
-          recipientId,
-          ':',
-          err.stack || err
-        );
-      });
+        .then(() => null)
+        .catch((err) => {
+          console.error(
+            'Oops! An error occurred while forwarding the response to',
+            recipientId,
+            ':',
+            err.stack || err
+          );
+        });
     } else {
       console.error('Oops! Couldn\'t find user for session:', sessionId);
       // Giving the wheel back to our bot
       return Promise.resolve()
     }
   },
-  getRestaurant({context, entities}) {
-    let yelpRestaurant = '';
-    console.log('GETRESTAURANT: CONTEXT', context)
-    console.log('GETRESTAURANT: ENTITIES', entities)
-    const term = entities.intent[0].value === 'food_get' ? 'food' : '';
-    context.intent = term || " ";
+  getRestaurant({ context, entities }) {
+
+    const term = `${entities.cuisine[0].value}%${entities.meal ? entities.meal[0] : 'food'}`
+    console.log("TERM", term);
     context.cuisine = entities.cuisine[0].value || " ";
     context.location = 'New York';
 
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
       // Here should go the api call, e.g.:
       // context.forecast = apiCall(context.loc)
 
-      request( fbActions.createYelpRequest(context.location, [context.intent, context.cuisine]), function(error, response, body){
-      if (!error && response.statusCode == 200) {
-        console.log('NEW YELP BUSINESSES', response.body.businesses[0])
-        yelpRestaurant = response.body.businesses[0].name + " rating: " + response.body.businesses[0].rating + " phone: " + response.body.businesses[0].phone + " address: " + response.body.businesses[0].location.address1;
-        console.log("yelp restaurants are ------", yelpRestaurant);
-        context.response = yelpRestaurant;
-        context.url = response.body.businesses[0].url;
-        context.number = response.body.businesses[0].display_phone;
-        context.second = response.body.businesses[1].name + " rating: " + response.body.businesses[1].rating + " phone: " + response.body.businesses[1].phone + " address: " + response.body.businesses[1].location.address1;
-        return resolve(context);
+      const yelpApi = createYelpRequest(context.location, term)
 
-      } else {
-        console.error("Failed calling Yelp API", response.statusCode, response.statusMessage, body.error);
+      const requestCallback = (error, response, body) => {
+        console.log("BODY", body);
+        if (!error && response.statusCode == 200) {
+          const yelpRestaurant = body.businesses[0].name + " rating: " + body.businesses[0].rating + " phone: " + body.businesses[0].phone + " address: " + body.businesses[0].location.address1;
+          console.log("yelp restaurants are ------", yelpRestaurant);
+          context.response = yelpRestaurant;
+          context.url = body.businesses[0].url;
+          context.number = body.businesses[0].display_phone;
+          context.second = body.businesses[1].name + " rating: " + body.businesses[1].rating + " phone: " + body.businesses[1].phone + " address: " + body.businesses[1].location.address1;
+          return resolve(context);
+
+        } else {
+          console.error("Failed calling Yelp API", response.statusCode, response.statusMessage, body.error);
+        }
       }
-      });
-    });
-  },
 
+      request(yelpApi, requestCallback);
+    });
+  }
 };
 
 // Setting up our bot
@@ -157,7 +158,7 @@ const wit = new Wit({
 
 // Starting our webserver and putting it all together
 const app = express();
-app.use(({method, url}, rsp, next) => {
+app.use(({ method, url }, rsp, next) => {
   rsp.on('finish', () => {
     console.log(`${rsp.statusCode} ${method} ${url}`);
   });
@@ -195,12 +196,12 @@ app.post('/webhook', (req, res) => {
           const sessionId = findOrCreateSession(sender);
 
           // We retrieve the message content
-          const {text, attachments} = event.message;
+          const { text, attachments } = event.message;
           if (attachments) {
             // We received an attachment
             // Let's reply with an automatic message
             fbMessage(sender, 'Sorry I can only process text messages for now.')
-            .catch(console.error);
+              .catch(console.error);
           } else if (text) {
             // We received a text message
 
@@ -225,9 +226,9 @@ app.post('/webhook', (req, res) => {
               // Updating the user's current session state
               sessions[sessionId].context = context;
             })
-            .catch((err) => {
-              console.error('Oops! Got an error from Wit: ', err.stack || err);
-            })
+              .catch((err) => {
+                console.error('Oops! Got an error from Wit: ', err.stack || err);
+              })
           }
         } else {
           console.log('received event', JSON.stringify(event));
@@ -259,8 +260,8 @@ function verifyRequestSignature(req, res, buf) {
     var signatureHash = elements[1];
 
     var expectedHash = crypto.createHmac('sha1', FB_APP_SECRET)
-                        .update(buf)
-                        .digest('hex');
+      .update(buf)
+      .digest('hex');
 
     if (signatureHash != expectedHash) {
       throw new Error("Couldn't validate the request signature.");
