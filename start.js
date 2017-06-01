@@ -30,7 +30,7 @@ let log = require('node-wit').log;
 const PORT = process.env.PORT || 8445;
 
 // Wit.ai parameters
-const WIT_TOKEN = process.env.WIT_TOKEN;
+const WIT_TOKEN = process.env.WIT_TOKEN_NEW;
 
 // Messenger API parameters
 const FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN;
@@ -115,54 +115,20 @@ const actions = {
       return Promise.resolve()
     }
   },
-  setIntent({context, entities}) {
-    context.intent = entities.intent;
-
-    return new Promise(function(resolve, reject) {
-      // Here should go the api call, e.g.:
-      // context.forecast = apiCall(context.loc)
-      return resolve(context);
-    })
-  },
-  // You should implement your custom actions here
-  // See https://wit.ai/docs/quickstart
-  setRestaurantFoodType({context, entities}) {
-    context.cuisine = entities.restaurantFood[0].value
-    console.log('RESTAURANT FOOD: CONTEXT', context)
-    console.log('RESTAURANT FOOD: ENTITIES', entities)
-
-    return new Promise(function(resolve, reject) {
-      // Here should go the api call, e.g.:
-      // context.forecast = apiCall(context.loc)
-      return resolve(context);
-    })
-  },
-  setLocation({context, entities}) {
-    context.location = entities.location[0].value;
-    console.log('RESTAURANT LOCATION: CONTEXT', context)
-    console.log('RESTAURANT LOCATION: ENTITIES', entities)
-    return new Promise(function(resolve,reject){
-      return resolve(context);
-    })
-  },
-  setRestaurantPrice({context, entities}) {
-    console.log('RESTAURANT PRICE: CONTEXT', context)
-    console.log('RESTAURANT PRICE: ENTITIES', entities)
-     context.price = entities.restaurantPrice;
-    return new Promise(function(resolve, reject){
-      return resolve(context);
-    });
-  },
   getRestaurant({context, entities}) {
-    var yelpRestaurant = '';
+    let yelpRestaurant = '';
     console.log('GETRESTAURANT: CONTEXT', context)
     console.log('GETRESTAURANT: ENTITIES', entities)
+    const term = entities.intent[0].value === 'food_get' ? 'food' : '';
+    context.intent = term || " ";
+    context.cuisine = entities.cuisine[0].value || " ";
+    context.location = 'New York';
+
     return new Promise(function(resolve, reject) {
       // Here should go the api call, e.g.:
       // context.forecast = apiCall(context.loc)
 
-      //entities.location[0].value, entities.intent[0].value
-      request( fbActions.createYelpRequest(context.location, [context.intent[0].value, context.cuisine]), function(error, response, body){
+      request( fbActions.createYelpRequest(context.location, [context.intent, context.cuisine]), function(error, response, body){
       if (!error && response.statusCode == 200) {
         console.log('NEW YELP BUSINESSES', response.body.businesses[0])
         yelpRestaurant = response.body.businesses[0].name + " rating: " + response.body.businesses[0].rating + " phone: " + response.body.businesses[0].phone + " address: " + response.body.businesses[0].location.address1;
