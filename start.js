@@ -116,23 +116,19 @@ const actions = {
     }
   },
   getRestaurant({ context, entities }) {
-
-    const term = `${entities.cuisine[0].value}%${entities.meal ? entities.meal[0] : 'food'}`
-    console.log("TERM", term);
-    context.cuisine = entities.cuisine[0].value || " ";
-    context.location = 'New York';
+    const cuisine = entities.cuisine[0].value || " ";
+    const meal = entities.meal ? entities.meal[0].value : 'food';
+    const location = 'New York';
+    const term = `${cuisine}%${meal}`
 
     return new Promise(function (resolve, reject) {
-      // Here should go the api call, e.g.:
-      // context.forecast = apiCall(context.loc)
 
-      const yelpApi = createYelpRequest(context.location, term)
+      const yelpApi = createYelpRequest(location, term);
 
       const requestCallback = (error, response, body) => {
-        console.log("BODY", body);
         if (!error && response.statusCode == 200) {
-          const yelpRestaurant = body.businesses[0].name + " rating: " + body.businesses[0].rating + " phone: " + body.businesses[0].phone + " address: " + body.businesses[0].location.address1;
-          console.log("yelp restaurants are ------", yelpRestaurant);
+          const firstResponse = body.businesses[0];
+          const yelpRestaurant = `${firstResponse.name} rating: ${firstResponse.rating} phone: ${firstResponse.phone} address: ${firstResponse.location.address1}`;
           context.response = yelpRestaurant;
           context.url = body.businesses[0].url;
           context.number = body.businesses[0].display_phone;
