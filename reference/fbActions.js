@@ -1,9 +1,9 @@
-const
-  request = require('request'),
-  config = require('config');
+require('./.secrets');
 
-const YELP_ACCESS_TOKEN = config.get('yelpAccessToken');
-const PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
+const request = require('request');
+
+const YELP_ACCESS_TOKEN = process.env.YELP_ACCESS_TOKEN;
+const PAGE_ACCESS_TOKEN = process.env.FB_PAGE_TOKEN;
 
 module.exports = {
   sendYelp,
@@ -47,7 +47,7 @@ function createYelpRequest(location, term) {
     uri: 'https://api.yelp.com/v3/businesses/search',
     qs: {
       location: location,
-      term: term[0],
+      term: term[0] || " ",
       term: term[1] || " ",
       limit: 2
     },
