@@ -128,12 +128,24 @@ const actions = {
       const requestCallback = (error, response, body) => {
         if (!error && response.statusCode == 200) {
           const firstResponse = body.businesses[0];
-          const yelpRestaurant = `${firstResponse.name} rating: ${firstResponse.rating} phone: ${firstResponse.phone} address: ${firstResponse.location.address1}`;
-          context.response = yelpRestaurant;
-          context.url = body.businesses[0].url;
-          context.number = body.businesses[0].display_phone;
-          context.second = body.businesses[1].name + " rating: " + body.businesses[1].rating + " phone: " + body.businesses[1].phone + " address: " + body.businesses[1].location.address1;
-          return resolve(context);
+          const text = `${firstResponse.name} rating: ${firstResponse.rating} phone: ${firstResponse.phone} address: ${firstResponse.location.address1}`;
+          const url = body.businesses[0].url;
+          const number = body.businesses[0].display_phone;
+          const second = body.businesses[1].name + " rating: " + body.businesses[1].rating + " phone: " + body.businesses[1].phone + " address: " + body.businesses[1].location.address1;
+
+          const newContextBody = {
+            text,
+            cuisine,
+            meal,
+            location,
+            url,
+            number,
+            second
+          }
+
+          const newContext = Object.assign(context, newContextBody);
+          console.log("NEW CONTEXT", newContext);
+          return resolve(newContext);
 
         } else {
           console.error("Failed calling Yelp API", response.statusCode, response.statusMessage, body.error);
